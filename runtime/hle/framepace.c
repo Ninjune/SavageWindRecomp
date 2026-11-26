@@ -405,6 +405,11 @@ static void launch_trace(void) {
     static int on = -1;
     if (on < 0) on = env_int("SAVAGEWIND_TRACE_LAUNCH", 0) != 0;
     if (!on || g_rt_unwind) return;
+    // One line per present is far too much at high FPS: sample at most every 50 ms (~20 lines/s). A clock that
+    // jumps backwards simply delays the next line until it catches up.
+    uint64_t now = plat_now_ns();
+    static uint64_t next_sample_ns;
+    if (now < next_sample_ns) return;
     if (!trace_range(g_site.pause_state, 4) || *(uint32_t *)(uintptr_t)g_site.pause_state) return;
     Cpu *live = kernel_current_cpu();
     if (!live) return;
@@ -429,6 +434,7 @@ static void launch_trace(void) {
         VF(float, actor, 0x181c), VF(float, actor, 0x1824), VF(float, actor, 0x20bc),
         VF(float, actor, 0x20c0), VF(float, actor, 0x20c8), VF(float, actor, 0x1844),
         VF(float, actor, 0x1848), VF(float, actor, 0x209c), VF(float, actor, 0x128));
+    next_sample_ns = now + 50 * 1000 * 1000;
 }
 
 // TimeMgr also uses the normal clock increment for its cloud accumulator. The
