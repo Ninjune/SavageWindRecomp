@@ -39,6 +39,7 @@
 //   SAVAGEWIND_EVENT_FPS=<n>       frame rate in the events (default 0: the chosen one; 30: the console's)
 //   SAVAGEWIND_LOG_FRAMEPACE=<n>   every n clock updates: target, frame length, VFR ratio and interval
 //   SAVAGEWIND_NO_CONTROLLER_STEP=1  the controllers count presented frames (as the game does)
+//   SAVAGEWIND_TRACE_LAUNCH=1      one diagnostic [launchtrace] line per present; off by default, no effect when off
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -345,6 +346,8 @@ static float menu_speed_mult(void) {
     return speed / 100.0f;
 }
 
+static void launch_trace(void);  // diagnostic, off by default (defined below g_frame_ratio)
+
 void framepace_presented(uint64_t t, bool on_grid) {
     load_watch(t);
     if (!framepace_on()) return;
@@ -361,6 +364,7 @@ void framepace_presented(uint64_t t, bool on_grid) {
     static int fixed = -1;
     if (fixed < 0) fixed = env_int("SAVAGEWIND_NO_CONTROLLER_STEP", 0);
     if (!fixed) *(float *)(uintptr_t)CONTROLLER_STEP = g_step * menu_speed_mult();
+    launch_trace();
 }
 
 // The menus' speed: every frame the game sets a GUI speed to its integer interval x 0.5: 1 at 30 fps, 0.5 at 60, and
@@ -389,6 +393,43 @@ static void log_screens(void);
 // The frame's length in console frames (VFR's interval ratio as set below: 1 at 30 fps, 0.5 at 60), for game code
 // patched to scale a per-update step it doesn't scale itself
 static volatile float g_frame_ratio = 1;
+
+// Diagnostic only: present_pace runs on a guest thread (nvnQueuePresentTexture's HLE handler), so the getter can be
+// called on a copy of that thread's Cpu, the same guarded pattern as quick_drop_action.c. The live Cpu, guest memory
+// and frame pacing are never touched. Every guard failing emits nothing; the option is read once, default off.
+static bool trace_range(uint64_t addr, uint64_t size) {
+    return addr >= GUEST_LO && addr < GUEST_HI && size <= GUEST_HI - addr;
+}
+
+static void launch_trace(void) {
+    static int on = -1;
+    if (on < 0) on = env_int("SAVAGEWIND_TRACE_LAUNCH", 0) != 0;
+    if (!on || g_rt_unwind) return;
+    if (!trace_range(g_site.pause_state, 4) || *(uint32_t *)(uintptr_t)g_site.pause_state) return;
+    Cpu *live = kernel_current_cpu();
+    if (!live) return;
+    // player_actor is an optional site: it is zero without the 1.9.0 quick-drop group.
+    if (!trace_range(g_site.player_info, 8) || !trace_range(g_site.player_actor, 4)) return;
+    uint64_t heap = kernel_heap_size(), info = LD64(g_site.player_info);
+    if (heap < 0x94 || (info & 7) || info < HEAP_BASE || info - HEAP_BASE > heap - 0x94 ||
+        !trace_range(info, 0x94)) return;
+    if ((live->sp & 15) || live->sp < GUEST_LO + 0x100 || !trace_range(live->sp - 0x100, 0x100)) return;
+    Cpu call = *live;
+    call.sp -= 0x100;
+    call.x[0] = info;
+    call.x[1] = call.x[2] = call.x[3] = 0;
+    guest_call(&call, g_site.player_actor);
+    uint64_t actor = call.x[0];
+    if (heap < 0x20d0 || (actor & 7) || actor < HEAP_BASE || actor - HEAP_BASE > heap - 0x20d0 ||
+        !trace_range(actor, 0x20d0)) return;
+    LOG("[launchtrace] t %.3f step %.3f ratio %.3f pos %.3f %.3f %.3f actor %#llx "
+        "a181c %.3f a1824 %.3f a20bc %.3f a20c0 %.3f a20c8 %.3f a1844 %.3f a1848 %.3f a209c %.3f pad %.3f\n",
+        plat_now_ns() / 1e6, g_step, (double)g_frame_ratio,
+        VF(float, info, 0x88), VF(float, info, 0x8c), VF(float, info, 0x90), (unsigned long long)actor,
+        VF(float, actor, 0x181c), VF(float, actor, 0x1824), VF(float, actor, 0x20bc),
+        VF(float, actor, 0x20c0), VF(float, actor, 0x20c8), VF(float, actor, 0x1844),
+        VF(float, actor, 0x1848), VF(float, actor, 0x209c), VF(float, actor, 0x128));
+}
 
 // TimeMgr also uses the normal clock increment for its cloud accumulator. The
 // native frame delta, time gates, and separate Blood Moon timer stay in the game.
