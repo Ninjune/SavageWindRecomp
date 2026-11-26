@@ -801,15 +801,16 @@ Pendiente:
        por la razón del frame (`rt_arrow_gravity`, 1 a 30 FPS, sin la cámara lenta, como en la consola). Prueba:
        `SAVAGEWIND_LOG_ARROW=1` y `SAVAGEWIND_SCRIPT_CLOCK=1` disparando con ZR a 30, 60 y 120: la velocidad en el
        tiempo es la misma.
-     - Decaimiento del planeador (experimental, `SAVAGEWIND_GLIDE_DECAY=1`, desactivado por defecto): la actualización
-       del planeador que comprueba el stick resta su parámetro `OverSpeedDec` de la velocidad en `+0x181c` y `+0x1824`
-       (1.9.0 0x7000c866f0 y 0x7000c867b4) una vez por actualización del juego, sin paso de tiempo. Sin escalar, un
-       sangrado medido de 0,002 por actualización hace perder el impulso de un lanzamiento de windbomb entre 30 y 200
-       fps (cuantos más fps, antes). La opción escala **las dos** restas por `g_frame_ratio` (la razón del frame: 1 a 30
-       fps) mediante `rt_glide_overspeed_dec`; apagada, o con razón 1, resta la del juego bit a bit. **Efecto en el juego
-       sin verificar**: es una prueba, no un arreglo confirmado. Tras cambiar fuentes del generador o de los parches hay
-       que ejecutar `make gen`, recompilar y comprobar el ID del gamelib cargado antes de probar en el juego (ver
-       `AGENTS.md`).
+     - Decaimiento del planeador (experimental, activo por defecto; `SAVAGEWIND_GLIDE_DECAY=0` lo desactiva): la
+       actualización del planeador que comprueba el stick resta su parámetro `OverSpeedDec` de la velocidad en `+0x181c`
+       y `+0x1824` (1.9.0 0x7000c866f0 y 0x7000c867b4) una vez por actualización del juego, sin paso de tiempo. Sin
+       escalar, un sangrado medido de 0,002 por actualización hace perder el impulso de un lanzamiento de windbomb entre
+       30 y 200 fps (cuantos más fps, antes). Por defecto el parche escala **las dos** restas por `g_frame_ratio` (la
+       razón del frame: 1 a 30 fps, menor por encima) mediante `rt_glide_overspeed_dec`; con `SAVAGEWIND_GLIDE_DECAY=0`
+       vuelve a la resta del juego, sin escalar. A 30 fps (razón 1) los dos caminos dan el mismo resultado bit a bit,
+       así que ahí no cambia nada. **Efecto en el juego sin verificar**: es una prueba, no un arreglo confirmado. Tras
+       cambiar fuentes del generador o de los parches hay que ejecutar `make gen`, recompilar y comprobar el ID del
+       gamelib cargado antes de probar en el juego (ver `AGENTS.md`).
      - Micropasos del solver de Havok (#161): antes de cada paso de física el juego le da al solver
        round(delta frame x 6) micropasos (1.9.0 0x700156f930): 6 a 30 FPS, 3 a 60, 2 a 120, siempre la misma
        duración de micropaso. Con menos micropasos por paso el solver cede más ante lo que toca a Link: con un cuco

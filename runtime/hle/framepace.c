@@ -40,7 +40,8 @@
 //   SAVAGEWIND_LOG_FRAMEPACE=<n>   every n clock updates: target, frame length, VFR ratio and interval
 //   SAVAGEWIND_NO_CONTROLLER_STEP=1  the controllers count presented frames (as the game does)
 //   SAVAGEWIND_TRACE_LAUNCH=1      one diagnostic [launchtrace] line per present; off by default, no effect when off
-//   SAVAGEWIND_GLIDE_DECAY=1       scale the paraglider's per-update velocity decrement by the frame ratio (experimental)
+//   SAVAGEWIND_GLIDE_DECAY=0       keep the paraglider's per-update velocity decrement unscaled (guest behaviour);
+//                                  default: scale it by the frame ratio (experimental, effect unverified)
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -462,13 +463,14 @@ float rt_arrow_gravity(uint64_t arrow, float g) {
 
 // The paraglider's stick-gated update subtracts its OverSpeedDec parameter from velocity +0x181c / +0x1824 once per
 // guest update, with no time step (1.9.0 0x7000c866f0 / 0x7000c867b4): above 30 fps that bleeds a windbomb launch's
-// momentum ~9x faster than at 30. SAVAGEWIND_GLIDE_DECAY=1 scales the subtraction by the frame's length in console
-// frames. At 30 fps (ratio 1) and with the option off it is the guest's own subtraction, bit for bit. This
-// experiment's in-game effect is unverified.
+// momentum ~9x faster than at 30. The subtraction is scaled by the frame's length in console frames by default;
+// SAVAGEWIND_GLIDE_DECAY=0 restores the guest's unscaled subtraction. At 30 fps (ratio 1) both are the guest's own
+// subtraction, bit for bit. This experiment's in-game effect is unverified.
 float rt_glide_overspeed_dec(float v, float dec) {
     static int on = -1;
-    if (on < 0) on = env_int("SAVAGEWIND_GLIDE_DECAY", 0) != 0;
-    return on ? v - dec * g_frame_ratio : v - dec;
+    if (on < 0) on = env_int("SAVAGEWIND_GLIDE_DECAY", 1) != 0;
+    if (!on) return v - dec;
+    return v - dec * g_frame_ratio;
 }
 
 // The physics step's solver microsteps (tools/patches.py _solver_steps, #161, #425): the game asks for delta frame x 6,

@@ -39,20 +39,21 @@ static void check(float v, float dec, float ratio, float want, const char *what)
 int main(void) {
     const float traced_v = 1.493f, traced_dec = 0.002f;  /* the traced OverSpeedDec update */
     const float ratios[] = {0.105f, 0.5f, 1.0f, 1.5f};
-    int on = env_int("SAVAGEWIND_GLIDE_DECAY", 0) != 0;
+    int on = env_int("SAVAGEWIND_GLIDE_DECAY", 1) != 0;  /* default on; =0 is the kill switch */
 
     if (!on) {
-        /* Option off (unset or 0): every ratio gives the guest's subtraction, bit for bit. */
+        /* =0 (kill switch): every ratio gives the guest's subtraction, bit for bit. */
         for (unsigned i = 0; i < sizeof ratios / sizeof *ratios; i++)
-            check(traced_v, traced_dec, ratios[i], traced_v - traced_dec, "off: guest v - dec");
-        check(0.105f, 0.5f, 0.105f, 0.105f - 0.5f, "off: other values, opposite sign");
+            check(traced_v, traced_dec, ratios[i], traced_v - traced_dec, "=0: guest v - dec");
+        check(0.105f, 0.5f, 0.105f, 0.105f - 0.5f, "=0: other values, opposite sign");
     } else {
-        /* Option on at console speed is the same; below it the decrement follows the frame. */
+        /* Unset or =1 (default on): the decrement follows the frame; at ratio 1 the two paths are
+         * bit-identical, preserving the guest's 30 fps behaviour. */
         check(traced_v, traced_dec, 1.0f, traced_v - traced_dec, "on: ratio 1 is guest v - dec");
         check(traced_v, traced_dec, 0.105f, traced_v - traced_dec * 0.105f, "on: ratio 0.105");
         check(traced_v, traced_dec, 0.5f, traced_v - traced_dec * 0.5f, "on: ratio 0.5");
         check(0.105f, 0.5f, 1.5f, 0.105f - 0.5f * 1.5f, "on: ratio 1.5");
     }
-    printf("glide both helper: PASS (%d checks, option %s)\n", checks, on ? "on" : "off");
+    printf("glide both helper: PASS (%d checks, option %s)\n", checks, on ? "on (unset/=1)" : "off (=0)");
     return 0;
 }
