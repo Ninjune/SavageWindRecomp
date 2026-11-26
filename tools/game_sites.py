@@ -189,6 +189,9 @@ SITES = [
     # action's two stores of the launch height, one guest update each; the helper takes over both of them.
     Site('slide_launch_clear', 'code', 'bd20bd00 bd20c100 f9400660 94000000/fc000000 36000000/fff8001f', 0),
     Site('slide_launch_clear_second', 'code', 'bd20bd00 bd20c100 f9400660 94000000/fc000000 36000000/fff8001f', 1),
+    # Experimental glide-decay (tools/patches.py _glide_overspeed_dec): the paraglider's stick-gated update subtracts
+    # its OverSpeedDec parameter from velocity +0x181c once per guest update, with no time step. `at` 2 is that fsub.
+    Site('glide_overspeed_dec', 'code', 'f9403668 bd400101 1e213800 bd181e80', 2),
     # a stale actor in the target manager (tools/patches.py _stale_actor_helper, _stale_actor_target; #391, #393): the
     # helper that asks an actor for its link, and the camera target's inline copy of it
     Site('stale_actor_helper', 'code', 'b4000000/ff00001f f942b808 f9404500 14000000/fc000000 d65f03c0', 0),
@@ -793,6 +796,7 @@ KNOWN = {
         'surf_jump_request': 0x70011ea3d4,
         'slide_launch_clear': 0x7000c92938,
         'slide_launch_clear_second': 0x7000c9293c,
+        'glide_overspeed_dec': 0x7000c866f0,
         'stale_actor_helper': 0x700120bc40,
         'stale_actor_kind': 0x700120ccdc,
         'stale_actor_target': 0x7000dea400,

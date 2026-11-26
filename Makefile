@@ -899,6 +899,16 @@ test-launch-guard: $(B)/test_launch_guard
 
 .PHONY: test-launch-guard
 
+# Synthetic decision-logic check for the opt-in glide decay (runtime/hle/framepace.c); no runtime link needed.
+$(B)/test_glide_decay: tests/test_glide_decay.c
+	@mkdir -p $(B)
+	$(CC) -O1 -Wall -Wextra -Werror -o $@ $<
+
+test-glide-decay: $(B)/test_glide_decay
+	$(B)/test_glide_decay
+
+.PHONY: test-glide-decay
+
 $(B)/test_audio_mix: tests/test_audio_mix.c runtime/audio_mix.h runtime/settings.h
 	@mkdir -p $(B)
 	$(CC) -O1 -Wall -Wextra -Werror -o $@ $< -lm
