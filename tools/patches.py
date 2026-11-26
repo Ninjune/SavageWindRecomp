@@ -548,18 +548,6 @@ def _slide_launch_clear_second(gen, a):
     return f'  /* {a:#x}: str s0, [x8, #0x20c0]: cleared with +0x20bc by rt_slide_launch_clear */'
 
 
-# Experimental glide decay (runtime/hle/framepace.c rt_glide_overspeed_dec). The paraglider's stick-gated update
-# subtracts its OverSpeedDec parameter from velocity +0x181c once per guest update with no time step (1.9.0
-# 0x7000c866f0), so above 30 fps a windbomb launch loses its momentum too soon. The helper takes s0 (v, v[0]) and
-# s1 (dec, v[1]) as its two FP arguments and writes the result back into s0; no other register or the stack changes.
-def _glide_overspeed_dec(gen, a):
-    assert _word(gen, a) == 0x1e213800, hex(_word(gen, a))  # fsub s0, s0, s1
-    return ('{ extern float rt_glide_overspeed_dec(float, float); '
-            'union { uint32_t u; float f; } v = { .u = (uint32_t)c->v[0] }, d = { .u = (uint32_t)c->v[1] }; '
-            'v.f = rt_glide_overspeed_dec(v.f, d.f); c->v[0] = v.u; }'
-            f'  /* {a:#x}: fsub s0, s0, s1 (glide OverSpeedDec) */')
-
-
 # Experimental shield-surf takeoff grace (#305), runtime/hle/framepace.c. Preserve the original FP subtraction
 # through rt_fsub_s (runtime/cpu.h: fp_op_s on x86-64, a native FSUB on AArch64) when the grace is inactive,
 # including the game's FP exception/rounding behavior.
@@ -1514,7 +1502,6 @@ PATCHES = {
     'arrow_fall_gravity': _arrow_gravity,
     'slide_launch_clear': _slide_launch_clear,
     'slide_launch_clear_second': _slide_launch_clear_second,
-    'glide_overspeed_dec': _glide_overspeed_dec,
     'surf_contact': _surf_contact,
     'surf_boost_remove': _surf_boost_remove,
     'surf_jump_request': _surf_jump_request,

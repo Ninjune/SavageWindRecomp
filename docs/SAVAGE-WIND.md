@@ -877,17 +877,6 @@ Pendiente:
        verificado** y no se ha probado que arregle el problema, así que no se dice que el bug esté corregido. Prueba:
        30, 60, 120 y sin límite, con hacia delante pulsado y soltado, comparando el impulso del windbomb; anotar versión
        del juego, FPS, GPU/driver, ajustes y el resultado observado.
-     - Decaimiento experimental en el planeador: la pérdida de momentum del windbomb se midió a 30, 60, 120 y 240 FPS.
-       La actualización de la acción del planeador con la palanca pulsada resta su parámetro `OverSpeedDec` de la
-       velocidad (actor+0x181c) una vez por actualización del juego, sin paso de tiempo (1.9.0 0x7000c866f0), así que
-       por encima de 30 FPS se aplica más veces por segundo. `SAVAGEWIND_GLIDE_DECAY=1` (opción experimental,
-       **apagada por defecto**: sin la variable o a 0 el juego queda como estaba) cambia esa resta por
-       `rt_glide_overspeed_dec` (`runtime/hle/framepace.c`; parche `glide_overspeed_dec` en `tools/patches.py`), que la
-       escala por la razón del frame (`g_frame_ratio`): a 30 FPS (razón 1) es la resta del juego, a 60 la mitad. Es un
-       experimento a ciegas sobre esa pérdida medida: **el efecto en el juego no está verificado** y no se dice que el
-       bug esté corregido. Prueba: misma partida guardada y variante, con el planeador desplegado y hacia delante
-       pulsado, comparar el momentum a 30, 60, 120 y 240 FPS; anotar versión del juego, FPS, GPU/driver, ajustes y el
-       resultado observado.
      - Vsync: Vídeo > Sincronización vertical (ver "VSync y VRR" abajo). Por defecto Rápida (MAILBOX), sin tearing;
        cada refresco muestra la imagen más nueva. Una frecuencia que divide la del monitor (60 en 60/120/240 Hz) es
        la más fluida; una que no (60 o 90 en 144 Hz) alterna 2 y 3 refrescos por imagen; por encima de la del

@@ -426,16 +426,6 @@ void rt_slide_launch_clear(uint64_t actor, uint32_t value) {
     }
 }
 
-// The paraglider's stick-gated update subtracts its OverSpeedDec parameter from a velocity component once per guest
-// update, with no time step (1.9.0 0x7000c866f0): above 30 fps that decays a windbomb launch before the momentum can
-// carry. SAVAGEWIND_GLIDE_DECAY=1 scales the subtraction by the frame's length in console frames. At 30 fps (ratio 1)
-// and with the option off it is the guest's own subtraction. This experiment's in-game effect is unverified.
-float rt_glide_overspeed_dec(float v, float dec) {
-    static int on = -1;
-    if (on < 0) on = env_int("SAVAGEWIND_GLIDE_DECAY", 0) != 0;
-    return on ? v - dec * g_frame_ratio : v - dec;
-}
-
 // The physics step's solver microsteps (tools/patches.py _solver_steps, #161, #425): the game asks for delta frame x 6,
 // rounded (1.9.0 0x700156f930): 6 at 30 fps, 3 at 60, 2 at ~90, 1 or 2 at 120 (its delta frame wobbles around 0.25),
 // 1 from ~150. Holding a cucco over his head, Link's jump (0.61-0.63 m at 30 fps) depends on that count: 2 gave 0.13-0.20,
