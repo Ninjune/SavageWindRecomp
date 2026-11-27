@@ -40,8 +40,9 @@
 //   SAVAGEWIND_LOG_FRAMEPACE=<n>   every n clock updates: target, frame length, VFR ratio and interval
 //   SAVAGEWIND_NO_CONTROLLER_STEP=1  the controllers count presented frames (as the game does)
 //   SAVAGEWIND_TRACE_LAUNCH=1      one diagnostic [launchtrace] line per present; off by default, no effect when off
-//   SAVAGEWIND_GLIDE_DECAY=0       keep the paraglider's per-update velocity decrement unscaled (guest behaviour);
-//                                  default: scale it by the frame ratio (experimental, effect unverified)
+//   SAVAGEWIND_GLIDE_DECAY=0       keep the paraglider's per-update velocity changes unscaled (guest behaviour) at
+//                                  all four stick-gated sites: fsub (+0x181c / +0x1824) and their fadd mirrors;
+//                                  default: scale all four by the frame ratio (experimental, effect unverified)
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -471,6 +472,19 @@ float rt_glide_overspeed_dec(float v, float dec) {
     if (on < 0) on = env_int("SAVAGEWIND_GLIDE_DECAY", 1) != 0;
     if (!on) return v - dec;
     return v - dec * g_frame_ratio;
+}
+
+// The fadd mirrors of the two sites above: when a component's target is non-positive and it has fallen to or below
+// that target, the guest ADDS OverSpeedDec instead of subtracting it (1.9.0 0x7000c86718 / 0x7000c867dc). Scaling
+// the addition by the frame's length makes both directions agree; without it the negative component still loses
+// momentum at the raw rate while the positive one is scaled. The SAME read-once option controls all four sites:
+// SAVAGEWIND_GLIDE_DECAY=0 restores the guest's unscaled addition. At 30 fps (ratio 1) both are bit for bit the
+// guest's own addition. No sign/abs logic; this experiment's in-game effect is unverified.
+float rt_glide_overspeed_add(float v, float dec) {
+    static int on = -1;
+    if (on < 0) on = env_int("SAVAGEWIND_GLIDE_DECAY", 1) != 0;
+    if (!on) return v + dec;
+    return v + dec * g_frame_ratio;
 }
 
 // The physics step's solver microsteps (tools/patches.py _solver_steps, #161, #425): the game asks for delta frame x 6,
